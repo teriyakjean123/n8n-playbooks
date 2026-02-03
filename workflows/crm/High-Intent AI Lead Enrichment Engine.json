@@ -1,0 +1,1020 @@
+{
+  "name": "High-Intent AI Lead Enrichment Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "new-crm-user",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -160,
+        -576
+      ],
+      "id": "d7e13653-f4cb-4c69-9830-8cea28efcb83",
+      "name": "Webhook",
+      "webhookId": "d4bb6bbc-54a4-49fd-9807-5ab388544419"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        736,
+        -464
+      ],
+      "id": "de31cb07-b0a5-45f5-b95e-8b0c12b10ae6",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "w4spciQiKJNOg25P",
+          "name": "GROQ FOR SYNCNODE CRM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.user.email }}",
+                    "rightValue": "Enterprise",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    },
+                    "id": "879bf9cf-9901-4aad-bd7e-a1f463dc8342"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "6f5eb862-eadf-4c5a-a7b9-696ea9488e5d",
+                    "leftValue": "={{ $json.lead_id.toString() }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        560,
+        32
+      ],
+      "id": "4369db6a-7e5f-4540-b3d3-4c33a1d6f199",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiText = $input.first().json.output || $input.first().json.text;\n\nlet parsedData;\ntry {\n  // Convert the text string into a real JSON object\n  parsedData = JSON.parse(aiText);\n} catch (error) {\n  parsedData = { error: \"Failed to parse JSON\", raw: aiText };\n}\n\nconst leadId = $('Webhook').first().json.body.lead_id; \n\nreturn {\n  json: {\n    ...parsedData,\n    lead_id: leadId\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        -512
+      ],
+      "id": "7ec7b54f-631c-4a49-9621-5a2b03365bb6",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f031bf02-28ea-4faf-a1e4-f9a8fae7eac3",
+              "leftValue": "={{ $json.body.event }}",
+              "rightValue": "ENRICH_LEAD",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "0c4780d9-b7d0-4680-a7cb-d165e2ad630e",
+              "leftValue": "={{ $json.body.user.email }}",
+              "rightValue": "@yahoo.com",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        32,
+        -576
+      ],
+      "id": "655994c9-c94e-42a8-8c1d-ce8beab3fb64",
+      "name": "Checks the event"
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "email": "={{ $('Webhook').item.json.body.email }}",
+        "additionalFields": {
+          "customPropertiesUi": {
+            "customPropertiesValues": [
+              {
+                "property": "ai_pain_points",
+                "value": "={{ $('Code in JavaScript').item.json.pain_points }})."
+              }
+            ]
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        784,
+        208
+      ],
+      "id": "d5f5ee11-7b59-4f02-8a45-0a3ea814bea2",
+      "name": "Adding enrich leads",
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "zya8YHgVtz6AmN56",
+          "name": "HubSpot SEO Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE \"Leads\"\nSET \n  \"companyTier\" = $1,\n  \"painPoints\" = $2,\n  \"aiSalesHook\" = $3,\n  \"status\" = 'Completed ✅'\nWHERE \"id\" = $4\nRETURNING \"id\" as lead_id;",
+        "options": {
+          "queryReplacement": "={{ [ $json.tier, JSON.stringify($json.pain_points), $json.hook, $json.lead_id ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1248,
+        -512
+      ],
+      "id": "60185323-4767-463e-a841-5c59593cae0d",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "n1foR3NlMZ4TH34k",
+          "name": "Neon DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "resource": "engagement",
+        "type": "task",
+        "dueDate": "={{ $now.plus({ days: 1 }).toISO() }}",
+        "metadata": {
+          "body": "=Strategy Hook: {{ $('Code in JavaScript').item.json.hook }}",
+          "status": "NOT_STARTED",
+          "subject": "=AI Lead Follow Up: {{ $('Webhook').item.json.body.company_name }}"
+        },
+        "additionalFields": {
+          "associations": {
+            "ownerId": "={{ $json.id }}"
+          }
+        }
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        1248,
+        208
+      ],
+      "id": "88ce05b4-2e5d-4600-a16f-3b461a9a1425",
+      "name": "Assign a task",
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "zya8YHgVtz6AmN56",
+          "name": "HubSpot SEO Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "email": "={{ $json.body.user.email }}",
+        "additionalFields": {
+          "firstName": "={{ $json.body.user.username }}",
+          "phoneNumber": "={{ $json.body.user.phone }}"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        800,
+        -144
+      ],
+      "id": "8fd92df0-23d7-4185-a155-601696b54d2d",
+      "name": "Add user in hubspot",
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "zya8YHgVtz6AmN56",
+          "name": "HubSpot SEO Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "site_text",
+              "cssSelector": "body"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        560,
+        -592
+      ],
+      "id": "33085b97-e1b8-42fb-9c37-37b04046d33b",
+      "name": "HTML"
+    },
+    {
+      "parameters": {
+        "url": "=https://{{ $json.body.email.split('@')[1] }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        400,
+        -592
+      ],
+      "id": "74fcb33a-dc8d-4e7c-b00b-b77b3b34659b",
+      "name": "Search Website Domain Using Email",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "## User CRUD Operations or Lead Enrichment Checker\n",
+        "height": 352,
+        "width": 560,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -192,
+        -672
+      ],
+      "typeVersion": 1,
+      "id": "d41a7671-b236-4b34-8cc5-b98d36793d9d",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Enrichment Loop \n",
+        "height": 352,
+        "width": 1072,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        384,
+        -672
+      ],
+      "typeVersion": 1,
+      "id": "0d79a7fb-3aee-447e-b7d6-8746fda55a49",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1HCtuOkAp6Og0oRYr7g3RR5Zx6OsO9yKdxKb5t5ugPgc",
+          "mode": "list",
+          "cachedResultName": "Lead_Generation_Logs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1HCtuOkAp6Og0oRYr7g3RR5Zx6OsO9yKdxKb5t5ugPgc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1HCtuOkAp6Og0oRYr7g3RR5Zx6OsO9yKdxKb5t5ugPgc/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamps": "={{ $now.format('MM/dd/yy') }}",
+            "Lead Name": "={{ $('Webhook').item.json.body.company_name }}",
+            "Email": "={{ $('Webhook').item.json.body.email }}",
+            "Company": "={{ JSON.parse($('AI Web Scrapper').item.json.output).company }}",
+            "Status": "={{ $json.metadata.status }}",
+            "Website URL": "=https://{{ $('Webhook').item.json.body.email.split('@')[1] }}",
+            "AI hook": "={{ JSON.parse($('AI Web Scrapper').item.json.output).hook }}",
+            "Tier": "={{ JSON.parse($('AI Web Scrapper').item.json.output).tier }}",
+            "HubSpot ID": "={{ $json.engagement.id }}",
+            "Pain Points": "={{ JSON.parse($('AI Web Scrapper').item.json.output).pain_points.join(', ') }}",
+            "Owner ID": "={{ $('Get Owner Info').item.json.results[0].id }}",
+            "Owner Email": "={{ $('Get Owner Info').item.json.results[0].email }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamps",
+              "displayName": "Timestamps",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Name",
+              "displayName": "Lead Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tier",
+              "displayName": "Tier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Pain Points",
+              "displayName": "Pain Points",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI hook",
+              "displayName": "AI hook",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "HubSpot ID",
+              "displayName": "HubSpot ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website URL",
+              "displayName": "Website URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Owner ID",
+              "displayName": "Owner ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Owner Email",
+              "displayName": "Owner Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1408,
+        224
+      ],
+      "id": "0e98eb3e-f89f-40b2-8ae5-da4a877563d1",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "H3vQ9xVT94Mf8LrN",
+          "name": "Lead_Generation_Logs"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "operation": "search",
+        "returnAll": true,
+        "filterGroupsUi": {
+          "filterGroupsValues": [
+            {
+              "filtersUi": {
+                "filterValues": [
+                  {
+                    "propertyName": "email|string",
+                    "value": "={{ $('Webhook').item.json.body.email }}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "properties": [
+            "hubspot_owner_id"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        928,
+        208
+      ],
+      "id": "dbae29f2-8592-4df5-8104-f18600c39548",
+      "name": "Get Owner ID",
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "zya8YHgVtz6AmN56",
+          "name": "HubSpot SEO Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Processing & Actions\n",
+        "height": 592,
+        "width": 1296,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        512,
+        -176
+      ],
+      "typeVersion": 1,
+      "id": "dc5b477f-8821-43a5-9eb0-7297b3281cb9",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.hubapi.com/crm/v3/owners/{{ $('Get Owner ID').item.json.properties.hubspot_owner_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_HUBSPOT_KEY_HERE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1088,
+        208
+      ],
+      "id": "efe9e421-2f1f-4508-a994-b8e9cedf830e",
+      "name": "Get Owner Info"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze this lead:\nName: {{ $('Webhook').item.json.body.company_name }}   \nEmail: {{ $('Webhook').item.json.body.email }}         \n\nWebsite Cleaned Content:\n{{ $('HTML').item.json.site_text.slice(0, 5000) }}",
+        "options": {
+          "systemMessage": "You are an Elite Business Intelligence Analyst.\nAnalyze the lead's email domain.\n\n1. CLASSIFY: Is it \"Enterprise\" (Big Company), \"SMB\" (Small Business), or \"Individual\" (Gmail/Yahoo)?\n2. PREDICT: What are 3 key pain points this industry faces?\n3. HOOK: Write a 1-sentence strategic opening line.\n\nRETURN ONLY JSON:\n{\n  \"tier\": \"Enterprise|SMB|Individual\",\n  \"company\": \"String\",\n  \"pain_points\": [\"A\", \"B\", \"C\"],\n  \"hook\": \"String\"\n}\n\nIMPORTANT: Output raw JSON only. Do not use markdown code blocks (```json). Do not use backticks. Do not include any explanations."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        736,
+        -592
+      ],
+      "id": "1b3182db-31d8-4fe7-947a-ef6d11716b19",
+      "name": "AI Web Scrapper"
+    },
+    {
+      "parameters": {
+        "content": "## Strategic Briefing Generator",
+        "height": 656,
+        "width": 1296,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        512,
+        496
+      ],
+      "typeVersion": 1,
+      "id": "51fe6ff2-0692-4689-b02e-7c3b0a8a791f",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert Sales Strategist.\n\nINPUT DATA:\n- Lead: {{ $('Webhook').item.json.body.company_name }}\n- Tier: {{ $('Append row in sheet').item.json.Tier }}\n- Pain Points: {{ $('Append row in sheet').item.json[\"Pain Points\"] }}\n\nTASK:\nWrite a comprehensive, deep-dive \"Strategic Intelligence Briefing\" script.\nDo not be brief. Go into detail.\n\nINSTRUCTIONS:\n1. EXPAND on every pain point. Don't just list them; explain the business impact of each one.\n2. STRUCTURE the \"Strategic Analysis\" into these three specific sub-sections (use \\n\\n for line breaks):\n   - 🌍 Market Context: (Analyze the industry trends affecting them)\n   - ⚠️ Challenge Deep Dive: (Detailed breakdown of their specific pain points)\n   - 🚀 The Opportunity: (How solving these problems unlocks growth)\n3. LENGTH: The analysis alone should be at least 300 words.\n\nOUTPUT FORMAT:\nReturn a SINGLE JSON object.\n{\n  \"strategic_analysis\": \"The full 300+ word analysis with sections...\",\n  \"brief_content\": \"The full briefing...\"\n}",
+        "options": {
+          "systemMessage": "OUTPUT FORMAT:\nReturn a SINGLE JSON object:\n{\n  \"strategic_analysis\": \"Your analysis here...\",\n  \"brief_content\": \"Full brief here...\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        560,
+        592
+      ],
+      "id": "1324a1db-7eaf-4080-8d52-f833667a829c",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "operation": "copy",
+        "fileId": {
+          "__rl": true,
+          "value": "1Qv0rdi6UMppDGHO3jAVPcQYKKJiivGdxNTN8-8n3a48",
+          "mode": "list",
+          "cachedResultName": "Lead_Report_Template",
+          "cachedResultUrl": "https://docs.google.com/document/d/1Qv0rdi6UMppDGHO3jAVPcQYKKJiivGdxNTN8-8n3a48/edit?usp=drivesdk"
+        },
+        "name": "=Strategic Brief Intelligence - {{ $('Webhook').item.json.body.company_name }}",
+        "sameFolder": false,
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1cWe5RZfLvqBKoQP6ThYc6gQS5J6kx0ER",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        864,
+        592
+      ],
+      "id": "c2af866a-a82c-40e1-b4e4-e3f4f7b0337c",
+      "name": "Copy file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "7lJ1BLux3J5l4HPd",
+          "name": "Google Drive account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Copy file').item.json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "Strategic Brief Intelligence Script"
+            },
+            {
+              "action": "insert",
+              "text": "=Lead: {{ $('Webhook').item.json.body.company_name }}\nTier: {{ $('Append row in sheet').item.json.Tier }}\nPain Points: {{ $('Append row in sheet').item.json[\"Pain Points\"] }}\n\n------------------------------------------------\n\nSTRATEGIC ANALYSIS:\n{{ $('Interpolation').item.json.strategic_analysis }}\n\n------------------------------------------------\n\nSUGGESTED BRIEFING SCRIPT:\n{{ $('Interpolation').item.json.brief_content }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        592
+      ],
+      "id": "cd93e748-8f4f-42b7-aa84-fbe65ecc710c",
+      "name": "Update a document1",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "dmwXi2udvnidTP6i",
+          "name": "Google Docs account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        560,
+        752
+      ],
+      "id": "0675e2e4-b64c-495a-90ba-5c252329ffc7",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "pTshJs4YUjxhVG1L",
+          "name": "Fact Cheker Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawOutput = $('AI Agent').item.json.output;\n\ntry {\n  let jsonString = rawOutput;\n  const firstBrace = rawOutput.indexOf('{');\n  const lastBrace = rawOutput.lastIndexOf('}');\n  \n  if (firstBrace !== -1 && lastBrace !== -1) {\n    jsonString = rawOutput.substring(firstBrace, lastBrace + 1);\n  }\n\n  const parsedData = JSON.parse(jsonString);\n  if (Array.isArray(parsedData)) parsedData = parsedData[0];\n\n  return {\n    success: true,\n    method: \"Plan A (JSON Parse)\",\n    strategic_analysis: parsedData.strategic_analysis,\n    brief_content: parsedData.brief_content\n  };\n\n} catch (error) {\n \n  try {\n    const analysisMatch = rawOutput.match(/\"strategic_analysis\":\\s*\"([\\s\\S]*?)(?=\",)/);\n    \n   \n    const briefMatch = rawOutput.match(/\"brief_content\":\\s*\"([\\s\\S]*?)(?=\"\\s*(\\}|,))/);\n\n    return {\n      success: true,\n      method: \"Plan B (Regex Scrape)\",\n      strategic_analysis: analysisMatch ? analysisMatch[1].replace(/\\\\\"/g, '\"').replace(/\\\\n/g, '\\n') : \"Could not extract analysis.\",\n      brief_content: briefMatch ? briefMatch[1].replace(/\\\\\"/g, '\"').replace(/\\\\n/g, '\\n') : \"Could not extract brief.\"\n    };\n  } catch (scrapeError) {\n    return {\n      success: false,\n      error: \"Both plans failed. \" + error.message,\n      strategic_analysis: rawOutput\n    };\n  }\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        592
+      ],
+      "id": "08db4db3-4f0b-4775-9da1-f2a296a1989c",
+      "name": "Interpolation"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#sales-alert",
+          "mode": "name"
+        },
+        "text": "=🚀 *New Strategic Brief Generated!*  *Lead:* {{ $('Webhook').item.json.body.company_name }} *Link:* {{ $('Webhook').item.json.body.email.split('@')[1] }}  _Briefing analysis completed successfully._",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1424,
+        592
+      ],
+      "id": "b97a7f8d-624e-42ed-b199-dd00f76784ca",
+      "name": "Send a message",
+      "webhookId": "76ee03a6-2cf1-4e12-a1f1-f39029068385",
+      "credentials": {
+        "slackApi": {
+          "id": "2wXp8Nkhe6fp6TGd",
+          "name": "SEO BOT"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Checks the event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Web Scrapper",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Add user in hubspot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Adding enrich leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checks the event": {
+      "main": [
+        [
+          {
+            "node": "Search Website Domain Using Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adding enrich leads": {
+      "main": [
+        [
+          {
+            "node": "Get Owner ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assign a task": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML": {
+      "main": [
+        [
+          {
+            "node": "AI Web Scrapper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Website Domain Using Email": {
+      "main": [
+        [
+          {
+            "node": "HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add user in hubspot": {
+      "main": [
+        []
+      ]
+    },
+    "Get Owner ID": {
+      "main": [
+        [
+          {
+            "node": "Get Owner Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Owner Info": {
+      "main": [
+        [
+          {
+            "node": "Assign a task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Web Scrapper": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Copy file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Copy file": {
+      "main": [
+        [
+          {
+            "node": "Interpolation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a document1": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Interpolation": {
+      "main": [
+        [
+          {
+            "node": "Update a document1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "c4e9426d-9596-43fe-85b5-720c96374d9b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3993121bbfda468035f6079c149dae0734dfbd42159bcaf660a6bdf086aba58c"
+  },
+  "id": "XSvWEZuBtLNxATxYZ3kE9",
+  "tags": []
+}

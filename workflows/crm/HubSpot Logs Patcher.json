@@ -1,0 +1,111 @@
+{
+  "name": "HubSpot Logs Patcher",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "171f5e45-1a2c-437a-a5c0-315d366ca829",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        64,
+        160
+      ],
+      "id": "47c8bae7-248b-4e92-ab1b-3239c8918acb",
+      "name": "Webhook",
+      "webhookId": "171f5e45-1a2c-437a-a5c0-315d366ca829",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "OgpV2ed5CF9sictn",
+          "name": "Header Auth 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.hubapi.com/engagements/v1/engagements/{{ $json[\"Record ID\"] }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"engagement\": {\n    \"ownerId\": {{ $json[\"New Owner ID\"] }}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        480,
+        160
+      ],
+      "id": "08cfb2e7-5358-4f14-84e5-9de5aaad8943",
+      "name": "Patch Record ID in Hubspot Logs",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "k7DDBnZcTgn4iHiI",
+          "name": "HubSpot Bearer"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "headerRow": true
+        }
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        256,
+        160
+      ],
+      "id": "f7bf6535-fe34-43e8-8309-72b809b22fe0",
+      "name": "Extract CSV"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Patch Record ID in Hubspot Logs": {
+      "main": [
+        []
+      ]
+    },
+    "Extract CSV": {
+      "main": [
+        [
+          {
+            "node": "Patch Record ID in Hubspot Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "5cb811f8-4e98-4d4c-833b-91cdfea694bf",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3993121bbfda468035f6079c149dae0734dfbd42159bcaf660a6bdf086aba58c"
+  },
+  "id": "Y8amY4SqoDUAg9H81z11L",
+  "tags": []
+}

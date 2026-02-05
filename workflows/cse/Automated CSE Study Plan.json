@@ -14,21 +14,21 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.3,
       "position": [
-        0,
-        0
+        32,
+        -128
       ],
       "id": "8093a586-3c82-4fca-8fb2-0e446d025fe4",
       "name": "Schedule Trigger"
     },
     {
       "parameters": {
-        "jsCode": "const startDate = new Date('2026-02-04'); \n\nconst today = new Date();\nconst diffInMs = today - startDate;\nconst diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));\nconst currentStudyDay = diffInDays + 1;\n\nreturn {\n  studyDay: currentStudyDay, // This will now result in \"1\"\n  isActive: currentStudyDay > 0 && currentStudyDay <= 60\n};"
+        "jsCode": "// 1. Set your official start date (Day 1)\nconst startDate = new Date('2026-02-04T00:00:00+08:00'); // Added your +8 timezone\nconst today = new Date();\n\n// 2. Strip the time off both dates so we only compare the \"Days\"\nconst startOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());\nconst todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());\n\n// 3. Calculate difference in days\nconst diffInMs = todayOnly - startOnly;\nconst diffInDays = Math.round(diffInMs / (1000 * 60 * 60 * 24));\n\n// 4. Add 1 because Feb 4 is Day 1\nconst currentStudyDay = diffInDays + 1;\n\nreturn {\n  studyDay: currentStudyDay, \n  isActive: currentStudyDay > 0 && currentStudyDay <= 30\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        176,
-        0
+        240,
+        -128
       ],
       "id": "92c5b650-2e4e-4ea2-b8d3-b3e9cba4a7c7",
       "name": "The Date Calculator"
@@ -54,6 +54,9 @@
             {
               "lookupColumn": "Day",
               "lookupValue": "={{ $json.studyDay }}"
+            },
+            {
+              "lookupColumn": "Is_Docs_Created"
             }
           ]
         },
@@ -62,8 +65,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        384,
-        0
+        448,
+        -128
       ],
       "id": "fd5227a5-b79e-40d0-bb2a-330bc8db3221",
       "name": "Lesson Librarian",
@@ -80,17 +83,330 @@
         "url": "https://discord.com/api/webhooks/1468474855388352647/q1l3Xit6lJ8Lm_lvaUWcch0I93kPEjt6HeB5WbXBvVgv8YXqB5hmfVwmXsbiaYi56rH6",
         "sendBody": true,
         "specifyBody": "json",
+        "jsonBody": "={\n  \"embeds\": [\n    {\n      \"title\": \"Day {{ $('The Date Calculator').item.json.studyDay }}: {{ $('Lesson Librarian').item.json.Topic }}\",\n      \"url\": \"https://docs.google.com/document/d/{{ $('Duplicate Master Template').item.json.id }}\",\n      \"description\": \"> *“{{ [\"Success is the sum of small efforts repeated day in and day out.\", \"Believe you can and you are halfway there.\", \"The only bad workout is the one that did not happen.\", \"Do not watch the clock; do what it does. Keep going.\", \"Your future is created by what you do today, not tomorrow.\", \"It always seems impossible until it is done.\", \"Dream big and dare to fail.\", \"Action is the foundational key to all success.\"][Math.floor(Math.random() * 8)] }}”*\\n\\nYour mission for **Day {{ $('The Date Calculator').item.json.studyDay }}** is ready. Let's crush this.\",\n      \"color\": 5763719,\n      \"author\": {\n        \"name\": \"CSE 2026 Blitz Commander\",\n        \"icon_url\": \"https://cdn-icons-png.flaticon.com/512/2232/2232688.png\"\n      },\n      \"thumbnail\": {\n        \"url\": \"https://cdn-icons-png.flaticon.com/512/2997/2997235.png\"\n      },\n      \"fields\": [\n        { \"name\": \"🎯 Today's Topic\", \"value\": \"```fix\\n{{ $('Lesson Librarian').item.json.Topic }}\\n```\" },\n        { \"name\": \"📚 Study Materials\", \"value\": \"• [**OPEN GENERATED DRILL**](https://docs.google.com/document/d/{{ $('Duplicate Master Template').item.json.id }})\\n• [2026 Master Reviewer (Scribd)]({{ $('Lesson Librarian').item.json['PDF Reviewer 2026'] || '#' }})\\n• [2020 Reference PDF (GovPH)]({{ $('Lesson Librarian').item.json['PDF Reviewer 2020'] || '#' }})\" },\n        { \"name\": \"📊 Quick Actions\", \"value\": \"Ref: [Official Scope]({{ $('Lesson Librarian').item.json['Coverage Link'] || '#' }}) • Drill: [**Take Quiz**](https://docs.google.com/document/d/{{ $('Duplicate Master Template').item.json.id }})\\n📅 [**Open Master Schedule (G-Sheets)**](https://docs.google.com/spreadsheets/d/1NkgLAwc-8xQzrFZHDET47ctezOg3Q14HF5SArJpL4Ac/)\" },\n        { \"name\": \"💡 Strategy\", \"value\": \"{{ $('Lesson Librarian').item.json['Key Concept'] || 'Focus on the Coach Hints provided in the generated document.' }}\" }\n      ],\n      \"footer\": { \n        \"text\": \"Only 30 days left | Stay focused.\",\n        \"icon_url\": \"https://cdn-icons-png.flaticon.com/512/1081/1081035.png\"\n      },\n      \"timestamp\": \"{{ $now.toISO() }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        736,
+        96
+      ],
+      "id": "3a1344cf-9b52-4755-86ec-9c40c7e08b75",
+      "name": "Send to CSE Bot"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/webhooks/1468524605009297531/TANFiGTeOWPlqzw_7kQ2WknP2Itb6C4A9Em-LmM0lkLrU4C6fFmZK3wGcFyBZtRHCeAZ",
+        "sendBody": true,
+        "specifyBody": "json",
         "jsonBody": "={\n  \"embeds\": [\n    {\n      \"title\": \"Day {{ $json.Day }}: {{ $json.Subject }}\",\n      \"url\": \"{{ $json[\"Coverage Link\"] }}\", \n      \"description\": \"> *“{{ [\"Success is the sum of small efforts repeated day in and day out.\", \"Believe you can and you are halfway there.\", \"The only bad workout is the one that did not happen.\", \"Do not watch the clock; do what it does. Keep going.\", \"Your future is created by what you do today, not tomorrow.\", \"It always seems impossible until it is done.\", \"Dream big and dare to fail.\", \"Action is the foundational key to all success.\"][Math.floor(Math.random() * 8)] }}”*\\n\\nYour mission for **March 8th** is ready. Let's crush this.\",\n      \"color\": 5763719,\n      \"author\": {\n        \"name\": \"CSE 2026 Blitz Commander\",\n        \"icon_url\": \"https://cdn-icons-png.flaticon.com/512/2232/2232688.png\"\n      },\n      \"thumbnail\": {\n        \"url\": \"https://cdn-icons-png.flaticon.com/512/2997/2997235.png\"\n      },\n      \"fields\": [\n        { \"name\": \"🎯 Today's Topic\", \"value\": \"```fix\\n{{ $json.Topic }}\\n```\" },\n        { \"name\": \"📚 Study Materials\", \"value\": \"• [**2026 Master Reviewer (Scribd)**]({{ $json[\"PDF Reviewer 2026\"] }})\\n• [2020 Reference PDF (GovPH)]({{ $json[\"PDF Reviewer 2020\"] }})\" },\n        { \"name\": \"📊 Quick Actions\", \"value\": \"Ref: [Official Scope]({{ $json[\"Coverage Link\"] }}) • Drill: [Take Quiz]({{ $json[\"Quiz Link\"] }})\\n📅 [**Open Master Schedule (G-Sheets)**](https://docs.google.com/spreadsheets/d/1NkgLAwc-8xQzrFZHDET47ctezOg3Q14HF5SArJpL4Ac/)\" },\n        { \"name\": \"💡 Strategy\", \"value\": \"{{ $json[\"Key Concept\"] }}\" }\n      ],\n      \"footer\": { \n        \"text\": \"Only 30 days left | Stay focused.\",\n        \"icon_url\": \"https://cdn-icons-png.flaticon.com/512/1081/1081035.png\"\n      },\n      \"timestamp\": \"{{ $now.toISO() }}\"\n    }\n  ]\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        576,
-        0
+        704,
+        -304
       ],
-      "id": "3a1344cf-9b52-4755-86ec-9c40c7e08b75",
-      "name": "Send to CSE Bot"
+      "id": "186c71c7-e9d1-4d7d-a49b-094415c296f3",
+      "name": "Captain Hook"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "19yjmuT2W3N4BZtvPFGWa2ekYxpw-goHb",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        624,
+        -128
+      ],
+      "id": "71384622-53b4-4d1d-a55b-21fa45eccf72",
+      "name": "The Fetcher",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "7lJ1BLux3J5l4HPd",
+          "name": "Google Drive account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        -128
+      ],
+      "id": "353f0e31-7a04-468b-8b75-2c58b34cd105",
+      "name": "The Reader"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=I am providing the full text of a Civil Service Exam Reviewer. \nYour task is to compile a high-quality 70-item \"Master Practice Set\" for: {{ $('Lesson Librarian').item.json.Topic }}\n\n---\nREVIEWER TEXT:\n{{ $json.text }}\n---\n\nSTRICT EXTRACTION RULES:\n1. Extract multiple-choice questions related to \"{{ $('Lesson Librarian').item.json.Topic }}\".\n2. DATA CAPTURE: For Alphabetizing questions, you MUST include the list of items to be arranged (usually labeled A, B, C, D) AND the multiple-choice options (e.g., A) ABCD B) ACBD...). \n3. TARGET: 70 Items. If the topic runs out, use general Verbal or Numerical questions from the text.\n\nCOACH'S HINT GUIDELINES:\nFor EVERY single question, generate a unique \"💡 COACH'S HINT\":\n- Identify the specific rule (e.g., \"Alphabetizing by the second word\" or \"Context clues for Synonyms\").\n- Provide a pedagogical tip or mental shortcut.\n- NEVER reveal the correct answer.\n\nOUTPUT FORMATTING (Strict Plain Text - NO Markdown):\n1. Main Title: Write the title in ALL CAPS with equal signs above and below it. \n   Example:\n   ==================================================\n   ALPHABETIZING & SYNONYMS - MASTER DRILL (DAY 2)\n   ==================================================\n\n2. Formatting Rules:\n   - Do NOT use hashtags (#) for headers.\n   - Do NOT use asterisks (**) for bolding. \n   - Use UPPERCASE letters for emphasis instead of bolding.\n\n3. Item Structure:\n   [Question Number]. [Question Text or List of Items A-D]\n   \n   Options: A) [Text]  B) [Text]  C) [Text]  D) [Text]\n   \n   💡 COACH'S HINT: [Your detailed tip]\n\n4. Separation: Insert a dashed line (----------------------------------------) between every question.\n5. DO NOT include an Answer Key.",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        960,
+        -128
+      ],
+      "id": "25e98e07-941a-411e-b7ea-a29c55eb4fd6",
+      "name": "The Quizmaster",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        976,
+        -288
+      ],
+      "id": "ab9405d7-275c-4ae6-b013-7a885539eb95",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "pTshJs4YUjxhVG1L",
+          "name": "Fact Cheker Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1tSqBn9vfPDk-3Sk-Zs4h4uTfFtqCzgxeFQusREVZ7O4",
+          "mode": "list",
+          "cachedResultName": "CSE_30Day_Blitz_Schedule_Final",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1tSqBn9vfPDk-3Sk-Zs4h4uTfFtqCzgxeFQusREVZ7O4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2084422737,
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1tSqBn9vfPDk-3Sk-Zs4h4uTfFtqCzgxeFQusREVZ7O4/edit#gid=2084422737"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Day": "={{ $('Lesson Librarian').item.json.Day }}",
+            "Is_Docs_Created": "Completed"
+          },
+          "matchingColumns": [
+            "Day"
+          ],
+          "schema": [
+            {
+              "id": "Day",
+              "displayName": "Day",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Subject",
+              "displayName": "Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Topic",
+              "displayName": "Topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "PDF Reviewer 2026",
+              "displayName": "PDF Reviewer 2026",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "PDF Reviewer 2020",
+              "displayName": "PDF Reviewer 2020",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Coverage Link",
+              "displayName": "Coverage Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Quiz Link",
+              "displayName": "Quiz Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Key Concept",
+              "displayName": "Key Concept",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Is_Docs_Created",
+              "displayName": "Is_Docs_Created",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        560,
+        96
+      ],
+      "id": "cb744a78-912d-4903-a156-f0aa640dd385",
+      "name": "Uodate Column in Librarian",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "knJcdbq9pG9bZIF3",
+          "name": "ruhge-system-Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "copy",
+        "fileId": {
+          "__rl": true,
+          "value": "1XHbffUQl-e9SAs5jIZMAlVwHTeckimy0F_sPZ15W6Zw",
+          "mode": "id"
+        },
+        "name": "=Day {{ $('The Date Calculator').item.json.studyDay }} - {{ $('Lesson Librarian').item.json.Topic }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        176,
+        96
+      ],
+      "id": "83a595db-4e58-42ac-8c90-38f09efa88ac",
+      "name": "Duplicate Master Template",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "7lJ1BLux3J5l4HPd",
+          "name": "Google Drive account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $node[\"Duplicate Master Template\"].json[\"id\"] }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "replaceAll",
+              "text": "{{Topic}}",
+              "replaceText": "={{ $('Lesson Librarian').item.json.Topic }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{Day}}",
+              "replaceText": "={{ $node[\"The Date Calculator\"].json[\"studyDay\"].toString() }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{content}}",
+              "replaceText": "={{ $node[\"Text Formatter\"].json[\"clean_text\"] }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        368,
+        96
+      ],
+      "id": "f4c06159-b088-42d0-9273-395aedc1fb5f",
+      "name": "Populate Study Drill",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "dmwXi2udvnidTP6i",
+          "name": "Google Docs account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9a73aa33-58d6-4566-ae77-ff60771ee530",
+              "name": "clean_text",
+              "value": "={{ $node[\"The Quizmaster\"].json[\"text\"].replaceAll(\"\\n\", \"\\n\\n\") }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        96
+      ],
+      "id": "6d76aa94-221a-46cc-8242-718b1406378c",
+      "name": "Text Formatter"
     }
   ],
   "pinData": {},
@@ -121,6 +437,99 @@
       "main": [
         [
           {
+            "node": "The Fetcher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Captain Hook": {
+      "main": [
+        []
+      ]
+    },
+    "The Fetcher": {
+      "main": [
+        [
+          {
+            "node": "The Reader",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "The Reader": {
+      "main": [
+        [
+          {
+            "node": "The Quizmaster",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "The Quizmaster",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "The Quizmaster": {
+      "main": [
+        [
+          {
+            "node": "Text Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate Master Template": {
+      "main": [
+        [
+          {
+            "node": "Populate Study Drill",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Formatter": {
+      "main": [
+        [
+          {
+            "node": "Duplicate Master Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Populate Study Drill": {
+      "main": [
+        [
+          {
+            "node": "Uodate Column in Librarian",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Uodate Column in Librarian": {
+      "main": [
+        [
+          {
             "node": "Send to CSE Bot",
             "type": "main",
             "index": 0
@@ -129,12 +538,12 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "e3a6a95a-9790-4b6b-8301-13718382f27e",
+  "versionId": "c4578674-a16f-4763-94e4-87c82faaa4a8",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "3993121bbfda468035f6079c149dae0734dfbd42159bcaf660a6bdf086aba58c"

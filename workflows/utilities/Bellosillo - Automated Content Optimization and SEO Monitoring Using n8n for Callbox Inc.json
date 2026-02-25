@@ -1,0 +1,874 @@
+{
+  "name": "Bellosillo - Automated Content Optimization and SEO Monitoring Using n8n for Callbox Inc.",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "GA4 Node for SEO Analysis",
+        "height": 80,
+        "width": 208
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        288,
+        -240
+      ],
+      "typeVersion": 1,
+      "id": "de2c57e1-d08a-44bb-95af-60875c1a9a1f",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "NOTE: Using mock data to simulate search performance\n",
+        "height": 80,
+        "width": 208
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        272,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "79a1646f-f0f4-42be-b08b-f33a59d95e58",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "NOTE: Using mock data due to limited api access\n",
+        "height": 80,
+        "width": 208
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        288,
+        272
+      ],
+      "typeVersion": 1,
+      "id": "1f4659ad-ce03-470f-92d8-efd22f0b52d0",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                0
+              ],
+              "triggerAtHour": 5
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -192,
+        48
+      ],
+      "id": "a5c637f7-a7ee-4b2d-a7c2-8c86dbb6a930",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "=pagePath",
+        "joinMode": "enrichInput1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        832,
+        -112
+      ],
+      "id": "d5af8ff8-107f-436c-b85c-852d0d08d47e",
+      "name": "Merge GA4 and GSC"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a0ed359f-a824-413c-8888-78a4a1be49af",
+              "leftValue": "={{ $json.finalStatus }}",
+              "rightValue": "Needs Optimization",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1552,
+        80
+      ],
+      "id": "7334195c-4010-4edd-924e-c64870000a5e",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "pagePath",
+        "joinMode": "enrichInput1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1120,
+        80
+      ],
+      "id": "d7072e37-6269-40b5-80f1-1e987c761e4b",
+      "name": "Merge With Mock Hubspot Data and  Merge GA4 and GSC (Check Problems)"
+    },
+    {
+      "parameters": {
+        "jsCode": "for (const item of items) {\n  const json = item.json;\n  let issues = [];\n  let status = \"Performing Well\";\n\n  // If \"vid\" (HubSpot ID) is missing, then Lead Count is 0.\n  // If \"vid\" exists, we count it as 1 (for this row).\n  const leadCount = json.vid ? 1 : 0; \n  // -------------------------------------------\n\n  // 1. DETERMINE PAGE TYPE\n  let pageType = \"General Page\"; \n  const path = (json.pagePath || \"\").toLowerCase(); \n\n  if (path === '/' || path === '/home') {\n      pageType = \"Home Page\";\n  } else if (path.includes('about')) {\n      pageType = \"About Page\";\n  } else if (path.includes('contact')) {\n      pageType = \"Contact Page\";\n  } else if (path.includes('service') || path.includes('product') || path.includes('lead') || path.includes('b2b')) {\n      pageType = \"Service/Product Page\";\n  } else if (path.includes('blog') || path.includes('news') || path.includes('article')) {\n      pageType = \"Blog Post\";\n  } else if (path.includes('login') || path.includes('signup') || path.includes('auth')) {\n      pageType = \"Authentication Page\";\n  }\n\n  item.json.pageType = pageType;\n\n  // 2. CHECK FOR ISSUES\n  if ((json.ctr || 0) < 2) { \n    issues.push(\"Low CTR (Fix Title/Meta)\");\n  }\n\n  if ((json.bounceRate || 0) > 0.70) {\n    issues.push(\"High Bounce Rate (Improve Content)\");\n  }\n    \n  if (leadCount === 0) {\n    issues.push(\"No Leads Generated\");\n  }\n\n  // 3. DETERMINE STATUS\n  if (issues.length > 0) {\n    status = \"Needs Optimization\";\n  }\n\n  // 4. CALCULATE PRIORITY\n  let priority = \"Low\"; \n\n  if (status === \"Needs Optimization\") {\n      priority = \"Medium\";\n\n      if (pageType === \"Service/Product Page\" || pageType === \"Home Page\") {\n          priority = \"High\";\n      }\n\n      if (issues.length >= 2) {\n          priority = \"High\";\n      }\n\n      if (leadCount === 0) {\n          priority = \"Critical\";\n      }\n  }\n\n  item.json.issuesFound = issues.length > 0 ? issues.join(\", \") : \"No Issues Found\";\n  item.json.finalStatus = status; \n  item.json.priority = priority; \n  item.json.leads = leadCount; \n\n  // --- TIME FORMATTING SECTION ---\n  \n// Capture the current time once so it stays consistent\n  const now = new Date();\n\n  // 1. Get the Date part (YYYY-MM-DD) using 'en-CA'\n  const datePart = now.toLocaleDateString('en-CA', {\n    timeZone: 'Asia/Manila',\n    year: 'numeric',\n    month: '2-digit',\n    day: '2-digit'\n  });\n\n  // 2. Get the Time part (12-hour with AM/PM) using 'en-US'\n  const timePart = now.toLocaleTimeString('en-US', {\n    timeZone: 'Asia/Manila',\n    hour: '2-digit',\n    minute: '2-digit',\n    second: '2-digit',\n    hour12: true  // This enables AM/PM\n  });\n\n  // Combine them: \"2025-01-30 03:45:10 PM\"\n  item.json.timestamp = `${datePart} ${timePart}`;\n\n  // Save just the time: \"03:45:10 PM\"\n  item.json.timeOnly = timePart;\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1328,
+        80
+      ],
+      "id": "0568a504-66a1-41b7-b2ec-6259b5de1856",
+      "name": "Analyze Metrics and Define Rules"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0ae3250e-5f0f-4d9b-b1c9-2a6c8ab926f7",
+              "name": "finalStatus",
+              "value": "Healthy",
+              "type": "string"
+            },
+            {
+              "id": "08e2e943-df55-480d-a9c5-46e8406e2ebf",
+              "name": "emailSubject",
+              "value": "Weekly SEO Report: All Good",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1760,
+        320
+      ],
+      "id": "4a202378-baf8-4f6d-8936-40d0ecb3eb27",
+      "name": "Performing Well"
+    },
+    {
+      "parameters": {
+        "content": "   SEO Issues found if              condition is true",
+        "height": 80,
+        "width": 208
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1664,
+        -240
+      ],
+      "typeVersion": 1,
+      "id": "470f0192-2806-4435-94bc-4d46b36314fe",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0ae3250e-5f0f-4d9b-b1c9-2a6c8ab926f7",
+              "name": "finalStatus",
+              "value": "Action Required",
+              "type": "string"
+            },
+            {
+              "id": "08e2e943-df55-480d-a9c5-46e8406e2ebf",
+              "name": "emailSubject",
+              "value": "URGENT: SEO Issues Found",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1744,
+        -176
+      ],
+      "id": "f47a1fa6-2e22-488b-ba6b-40b2ef607d6a",
+      "name": "Needs Optimization"
+    },
+    {
+      "parameters": {
+        "content": "Weekly report is good if false",
+        "height": 80,
+        "width": 208
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1712,
+        256
+      ],
+      "typeVersion": 1,
+      "id": "953c8fac-0c3b-48cb-bbf7-75fdd1422e52",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1mrd6m_VpQxsRWaglM8HoN5aXZfr52qe3hSk_G5E-Vfk",
+          "mode": "list",
+          "cachedResultName": "SEO Logs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mrd6m_VpQxsRWaglM8HoN5aXZfr52qe3hSk_G5E-Vfk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mrd6m_VpQxsRWaglM8HoN5aXZfr52qe3hSk_G5E-Vfk/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $now.format('yyyy-MM-dd') }}",
+            "Page Path": "={{ $json.pagePath }}",
+            "Status": "={{ $json.finalStatus }}",
+            "Issues Detected": "={{ $json.issuesFound }}",
+            "Priority": "={{ $json.priority }}",
+            "Page Type": "={{ $json.pageType }}",
+            "CTR": "={{ $json.ctr }}",
+            "Bounce  Rate": "={{ $json.bounceRate }}",
+            "Time": "={{ $json.timeOnly }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Page Path",
+              "displayName": "Page Path",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Issues Detected",
+              "displayName": "Issues Detected",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CTR",
+              "displayName": "CTR",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Bounce  Rate",
+              "displayName": "Bounce  Rate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Page Type",
+              "displayName": "Page Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2432,
+        320
+      ],
+      "id": "e8cdb18b-3a85-459b-8778-807f9e470099",
+      "name": "SEO Automation Logs",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "knJcdbq9pG9bZIF3",
+          "name": "ruhge-system-Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#all-callbox-inc",
+          "mode": "name"
+        },
+        "text": "=🚨 *Urgent SEO Alert*\n*Page:* <https://callboxinc.com{{ $('Needs Optimization').item.json.pagePath }}|{{ $('Needs Optimization').item.json.pagePath }}>\n*Type:* {{ $('Needs Optimization').item.json.pageType }}\n\n> *🔴 Status:* {{ $('Needs Optimization').item.json.finalStatus }}\n> *⚠️ Issues:* {{ $('Needs Optimization').item.json.issuesFound }}\n> *🔝 Priority:* {{ $('Needs Optimization').item.json.priority }}\n\nPlease check this immediately.\n\n----------------------------------\n📖 *Consultant Diagnosis:*\n{{ $json.text }}\n\n",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        2416,
+        -272
+      ],
+      "id": "6b86468a-2db5-4419-aac0-7e3bcfe11014",
+      "name": "SEO BOT",
+      "webhookId": "ac4643d4-863b-44f4-b3dc-e960f0ecf3e4",
+      "credentials": {
+        "slackApi": {
+          "id": "2wXp8Nkhe6fp6TGd",
+          "name": "SEO BOT"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        288
+      ],
+      "id": "6cddd547-66ba-429a-81bf-9cd5392c673a",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "sendTo": "devojt@callboxinc.com",
+        "subject": "=WARNING⚠ SEO Alert: {{ $json.pagePath }}",
+        "message": "=<div style=\"font-family: Arial, sans-serif; color: #333; max-width: 600px; border: 1px solid #e0e0e0; border-radius: 5px; overflow: hidden;\">\n  \n  <div style=\"background-color: #d93025; color: #ffffff; padding: 20px; text-align: center;\">\n    <h2 style=\"margin: 0; font-size: 20px;\">🚨 Urgent SEO Alert</h2>\n  </div>\n\n  <div style=\"padding: 25px; background-color: #ffffff;\">\n    \n    <p style=\"font-size: 16px; margin-bottom: 10px;\">\n      <strong>Page:</strong> <br>\n      <a href=\"https://junruhge-portfolio.vercel.app{{ $json.pagePath }}\" style=\"color: #1a73e8; font-size: 18px; text-decoration: none;\">\n        {{ $json.pagePath }}\n      </a>\n    </p>\n\n    <p style=\"font-size: 16px; margin-bottom: 20px;\">\n      <strong>Type:</strong> <span style=\"background-color: #eee; padding: 2px 6px; border-radius: 4px;\">{{ $json.pageType }}</span>\n    </p>\n\n    <div style=\"background-color: #fce8e6; border-left: 5px solid #d93025; padding: 15px; margin-bottom: 20px;\">\n      <p style=\"margin: 5px 0;\"><strong>🔴 Status:</strong> {{ $json.finalStatus }}</p>\n      <p style=\"margin: 5px 0;\"><strong>⚠️ Issues Found:</strong> {{ $json.issuesFound }}</p>\n      <p style=\"margin: 5px 0;\"><strong>🔥 Priority:</strong> {{ $json.priority }}</p>\n    </div>\n\n    <p style=\"font-size: 14px; color: #555;\">\n      Please investigate these metrics immediately to prevent traffic loss.\n    </p>\n  </div>\n\n  <div style=\"background-color: #f1f3f4; padding: 10px; text-align: center; font-size: 12px; color: #888;\">\n    Automated SEO Monitoring System\n  </div>\n\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2416,
+        96
+      ],
+      "id": "20df759a-f1b8-4f59-b3c5-65a9009abd71",
+      "name": "Sents Notification to Admin",
+      "webhookId": "e728e0ca-2027-4713-8c30-bf4f6e2eb9c2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "SRi6XjuafgL3VqNb",
+          "name": "ruhge-system-Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a Senior Digital Marketing Consultant.\nI am providing you with performance metrics for a B2B webpage.\n\nDATA:\n- Page Path: {{ $json.pagePath }}\n- Bounce Rate: {{ $json.bounceRate }}\n- CTR: {{ $json.ctr }}%\n- Leads: {{ $json.leads }}\n\nTASK:\nProvide 3 actionable recommendations to fix the failing metrics.\n\nOUTPUT FORMAT:\nStart every bullet point with the \"•\" symbol (do NOT use asterisks).",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        2112,
+        -320
+      ],
+      "id": "3d69d6ef-cc59-4813-8ffc-5dc4f7115a07",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 1104,
+        "width": 3008
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -368,
+        -432
+      ],
+      "typeVersion": 1,
+      "id": "ace67d26-91ac-4563-92ab-a678e1f0c958",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "operation": "getAll",
+        "returnAll": true,
+        "additionalFields": {
+          "propertiesCollection": {
+            "propertiesValues": {
+              "properties": [
+                "firstname",
+                "email",
+                "hs_analytics_last_url"
+              ]
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        336,
+        336
+      ],
+      "id": "6c1d7f2a-1a8b-4e5d-97c3-fc7e25fdddb4",
+      "name": "Get many contacts",
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "zya8YHgVtz6AmN56",
+          "name": "HubSpot SEO Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        2416,
+        -80
+      ],
+      "id": "dd89ebd7-9a44-489f-be7d-97654afce55d",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "WxHt8UvxXs7d2Aqf",
+          "name": "GROQ ANALYSIS CONSULTANT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "propertyId": {
+          "__rl": true,
+          "value": "519858620",
+          "mode": "id"
+        },
+        "dateRange": "last30days",
+        "metricsGA4": {
+          "metricValues": [
+            {
+              "listName": "sessions"
+            },
+            {
+              "listName": "other",
+              "name": "bounceRate"
+            },
+            {
+              "listName": "other",
+              "name": "engagementRate"
+            }
+          ]
+        },
+        "dimensionsGA4": {
+          "dimensionValues": [
+            {
+              "listName": "other",
+              "name": "pagePath"
+            }
+          ]
+        },
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.googleAnalytics",
+      "typeVersion": 2,
+      "position": [
+        336,
+        -192
+      ],
+      "id": "b2f6b529-e913-4e26-93a1-6a98e57f5257",
+      "name": "SEO Analysis",
+      "credentials": {
+        "googleAnalyticsOAuth2": {
+          "id": "gmLqfvd2fz2QunXl",
+          "name": "SEO ANALYSIS (USING PORTFOLIO FOR TESTING)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.googleapis.com/webmasters/v3/sites/https%3A%2F%2Fjunruhge-portfolio.vercel.app%2F/searchAnalytics/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"startDate\": \"{{ $now.minus({days: 30}).toFormat('yyyy-MM-dd') }}\",\n  \"endDate\": \"{{ $now.minus({days: 3}).toFormat('yyyy-MM-dd') }}\",\n  \"dimensions\": [\"page\"],\n  \"rowLimit\": 10\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        336,
+        64
+      ],
+      "id": "919ff0b2-6e44-4f3a-826d-2fe82eab41c6",
+      "name": "HTTP Request to GSC",
+      "credentials": {
+        "oAuth2Api": {
+          "id": "zcrNR56AygvkSqlE",
+          "name": "Portfolio Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        -224
+      ],
+      "id": "eaebb0f5-60f1-4276-8d61-cef673c1cf10",
+      "name": "Limit Leads Output to 1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Get the data from the previous HTTP node\nconst response = items[0].json;\n\n// 2. Check if Google sent any rows. If not, return an empty list.\nconst rows = response.rows || [];\n\nif (rows.length === 0) {\n  // Return an empty item so the Merge Node doesn't error out\n  return [];\n}\n\n// 3. If data exists, clean it up to match your GA4 format\nreturn rows.map(row => {\n  return {\n    json: {\n      // Clean the URL (Remove domain so it matches GA4's '/')\n      pagePath: row.keys[0].replace('https://junruhge-portfolio.vercel.app', ''), \n      \n      // Map the metrics\n      clicks: row.clicks,\n      impressions: row.impressions,\n      ctr: row.ctr,\n      position: row.position\n    }\n  }\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        64
+      ],
+      "id": "d18af68e-56da-46cb-b3d8-dc976f0a6945",
+      "name": "CHECKS IF THEIR IS DATA FETCHED IN GSC",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "72d250f3-82fb-4abe-8736-2225a08bbd3e",
+              "name": "pagePath",
+              "value": "/",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        608,
+        336
+      ],
+      "id": "f51fa826-5bbf-495c-8504-37a930b13a08",
+      "name": "Set Page Path in HubSpot"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get many contacts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SEO Analysis",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request to GSC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge GA4 and GSC": {
+      "main": [
+        [
+          {
+            "node": "Merge With Mock Hubspot Data and  Merge GA4 and GSC (Check Problems)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge With Mock Hubspot Data and  Merge GA4 and GSC (Check Problems)": {
+      "main": [
+        [
+          {
+            "node": "Analyze Metrics and Define Rules",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Metrics and Define Rules": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Needs Optimization",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Performing Well",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Optimization": {
+      "main": [
+        [
+          {
+            "node": "Limit Leads Output to 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Performing Well": {
+      "main": [
+        [
+          {
+            "node": "SEO Automation Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEO Automation Logs": {
+      "main": [
+        []
+      ]
+    },
+    "SEO BOT": {
+      "main": [
+        []
+      ]
+    },
+    "Sents Notification to Admin": {
+      "main": [
+        []
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "SEO BOT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many contacts": {
+      "main": [
+        [
+          {
+            "node": "Set Page Path in HubSpot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEO Analysis": {
+      "main": [
+        [
+          {
+            "node": "Merge GA4 and GSC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request to GSC": {
+      "main": [
+        [
+          {
+            "node": "CHECKS IF THEIR IS DATA FETCHED IN GSC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit Leads Output to 1": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Sents Notification to Admin",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SEO Automation Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CHECKS IF THEIR IS DATA FETCHED IN GSC": {
+      "main": [
+        [
+          {
+            "node": "Merge GA4 and GSC",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Set Page Path in HubSpot": {
+      "main": [
+        [
+          {
+            "node": "Merge With Mock Hubspot Data and  Merge GA4 and GSC (Check Problems)",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "71770cca-19e9-461c-a2df-2d3dc837698e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3993121bbfda468035f6079c149dae0734dfbd42159bcaf660a6bdf086aba58c"
+  },
+  "id": "_2PemfisMDg_uo2CpJZ1K",
+  "tags": []
+}
